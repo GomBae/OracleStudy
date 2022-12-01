@@ -2,6 +2,10 @@ package com.sist.client;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.Socket;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -11,12 +15,16 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
-public class ChatClient extends JFrame implements ActionListener{
+public class ChatClient extends JFrame implements ActionListener,Runnable{
 
 	JTextArea ta;
 	JTextField tf;
 	JButton b1,b2;
 	private String name;
+	//네트워크 관련 라이브러리 
+	private Socket s; //연결기기
+	private OutputStream out; //서버로 전송
+	private BufferedReader in; //서버로부터 값 읽기 
 	
 	public ChatClient() {
 		ta=new JTextArea();
@@ -54,6 +62,11 @@ public class ChatClient extends JFrame implements ActionListener{
 		if(e.getSource()==b1) {
 			name=JOptionPane.showInputDialog("이름 입력 : ");
 			//서버연결
+			try {
+				s=new Socket("localhost",3355);//연결 => 서버에 전화걸기
+				in=new BufferedReader(new InputStreamReader(s.getInputStream()));//서버로부터 값을 받는다
+				out=s.getOutputStream();
+			}catch(Exception ex) {ex.printStackTrace();}
 			b1.setEnabled(false);
 			tf.setEnabled(true);
 			tf.requestFocus();
@@ -69,10 +82,29 @@ public class ChatClient extends JFrame implements ActionListener{
 				return;
 			}
 			//입력값을 서버로 전송
-			ta.append(msg+"\n");
+			try {
+				out.write(("["+name+"]"+msg+"\n").getBytes());
+				//out(서버) => 서버로 전송
+			}catch(Exception ex) {}
+//			ta.append(msg+"\n");
+			//서버로부터 들어오는 데이터를 읽기 시작
+			new Thread(this).start();
 			tf.setText("");
 		}
 		
+		
+	}
+	
+	//서버에서 보내준 데이터를 출력
+	@Override
+	public void run() {
+		// TODO Auto-generated method stub
+		try {
+			while(true) {
+				String msg=in.readLine();// 서버에서 보내준 데이터를 받는다
+				ta.append(msg+"\n");
+			}
+		}catch(Exception e) {e.printStackTrace();}
 		
 	}
 
